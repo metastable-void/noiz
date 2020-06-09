@@ -1,0 +1,67 @@
+<!--
+    Part of a suite: noiz (2020)
+    Copyright (C) 真空 (@ Menhera.org) All rights reserved.
+
+    This work is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This work is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<meta charset="utf-8">
+<title>noiz</title>
+<h1>noiz (2020): Version 0</h1>
+<p>Work by 真空</p>
+<script>
+    const DIVISION = 12;
+    const BASE = 32.70319566257483;
+    
+    const ac = new AudioContext;
+
+    const interval01 = (leftIsClosed, rightIsClosed) => {
+        let x;
+        do {
+            x = Math.random();
+        } while (x == 0 && !leftIsClosed || x == 1 && !rightIsClosed);
+        return x;
+    };
+
+    const shuf = (() => {
+        const re = new Float32Array(8);
+        const im = new Float32Array(8);
+        
+        return () => {
+            for (let i = 1; i < re.length && i < im.length; i++) {
+                const phase = 2 * Math.PI * interval01(true, false);
+                const abs = interval01(true, true);
+                re[i] = abs * Math.cos(phase);
+                im[i] = abs * Math.sin(phase);
+            }
+
+            return ac.createPeriodicWave(re, im);
+        };
+    })();
+
+    const tones = [];
+    for (let i = 0; i < DIVISION; i++) {
+        tones[i] = ac.createOscillator();
+        const f = BASE * 2 ** (i / DIVISION);
+        tones[i].frequency.value = f;
+        tones[i].connect(ac.destination);
+    }
+
+    const setWaves = () => tones.forEach(
+        osc => osc.setPeriodicWave(shuf())
+    );
+
+    setWaves();
+    tones.forEach(osc => osc.start());
+</script>
