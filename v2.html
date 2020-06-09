@@ -1,0 +1,98 @@
+<!--
+    Part of a suite: noiz (2020)
+    Copyright (C) 2020  真空 (@ Menhera.org) All rights reserved.
+
+    This work is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This work is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>noiz</title>
+<h1><i>noiz</i> (2020): <i>Version 2</i></h1>
+<p>Work by <span lang="ja">真空</span></p>
+<p><strong>This page plays sounds.</strong></p>
+<p><label><input type="checkbox" checked id="control_update" autocomplete="off"> Update</label></p>
+<p><label>Mean update interval: <input type="number" min="1" step="1" value="5" autocomplete="off" id="control_delay"> s</label></p>
+
+<script>
+    const control_update = document.getElementById('control_update');
+    const control_delay = document.getElementById('control_delay');
+
+    const DIVISION = 12;
+    const BASE = 32.70319566257483;
+    
+    const ac = new (window.AudioContext || window.webkitAudioContext);
+
+    const interval01 = (leftIsClosed, rightIsClosed) => {
+        let x;
+        do {
+            x = Math.random();
+        } while (x == 0 && !leftIsClosed || x == 1 && !rightIsClosed);
+        return x;
+    };
+
+    const shuf = (() => {
+        const re = new Float32Array(8);
+        const im = new Float32Array(8);
+        
+        return () => {
+            for (let i = 1; i < re.length && i < im.length; i++) {
+                const phase = 2 * Math.PI * interval01(true, false);
+                const abs = interval01(true, true);
+                re[i] = abs * Math.cos(phase);
+                im[i] = abs * Math.sin(phase);
+            }
+
+            return ac.createPeriodicWave(re, im);
+        };
+    })();
+
+    const tones = [];
+    const gains = [];
+    for (let i = 0; i < DIVISION; i++) {
+        tones[i] = ac.createOscillator();
+        gains[i] = ac.createGain();
+        gains[i].gain.value = 0.1;
+        const f = BASE * 2 ** (i / DIVISION);
+        tones[i].frequency.value = f;
+        tones[i].connect(gains[i]);
+        gains[i].connect(ac.destination);
+    }
+
+    const setWaves = () => tones.forEach(
+        osc => osc.setPeriodicWave(shuf())
+    );
+
+    const setGains = () => gains.forEach(
+        gain => void (gain.gain.value = 0.2 * interval01(true, true))
+    );
+
+    (async () => {
+        setWaves();
+        setGains();
+        tones.forEach(osc => osc.start());
+
+        while (true) {
+            const mean = Math.trunc(control_delay.value) * 1000;
+            const delay = Math.trunc(- Math.log(interval01(false, true)) * mean);
+            // -ln( [Uniform in (0,1)] ) * [avg]
+            await new Promise(res => setTimeout(res, delay));
+            if (control_update.checked) {
+                setWaves();
+                setGains();
+            }
+        }
+    })();
+</script>
+</html>
