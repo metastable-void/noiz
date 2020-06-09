@@ -26,7 +26,7 @@
     const DIVISION = 12;
     const BASE = 32.70319566257483;
     
-    const ac = new AudioContext;
+    const ac = new (window.AudioContext || window.webkitAudioContext);
 
     const interval01 = (leftIsClosed, rightIsClosed) => {
         let x;
