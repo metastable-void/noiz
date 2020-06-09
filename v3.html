@@ -31,6 +31,7 @@
 
     const DIVISION = 12;
     const BASE = 32.70319566257483;
+    const E = 535.49165552476473650;
     
     const ac = new (window.AudioContext || window.webkitAudioContext);
 
@@ -42,6 +43,19 @@
         return x;
     };
 
+    const logRandom = e => {
+        if (!e || isNaN(e) || e <= 0) {
+            return (Math.E ** Math.random() - 1) / (Math.E - 1);
+        } else if (e == 1) {
+            return Math.random();
+        } else if (e > 1) {
+            return (e ** Math.random() - 1) / (e - 1);
+        } else {
+            const e1 = 1 / e;
+            return 1 - (e1 ** Math.random() - 1) / (e1 - 1);
+        }
+    };
+
     const shuf = (() => {
         const re = new Float32Array(8);
         const im = new Float32Array(8);
@@ -49,7 +63,7 @@
         return () => {
             for (let i = 1; i < re.length && i < im.length; i++) {
                 const phase = 2 * Math.PI * interval01(true, false);
-                const abs = interval01(true, true) ** 2;
+                const abs = logRandom(E);
                 re[i] = abs * Math.cos(phase);
                 im[i] = abs * Math.sin(phase);
             }
@@ -75,7 +89,7 @@
     );
 
     const setGains = () => gains.forEach(
-        gain => void (gain.gain.value = 0.2 * interval01(true, true) ** 2)
+        gain => void (gain.gain.value = 0.2 * logRandom(E))
     );
 
     (async () => {
