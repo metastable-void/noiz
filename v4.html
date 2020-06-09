@@ -1,0 +1,217 @@
+<!--
+    Part of a suite: noiz (2020)
+    Copyright (C) 2020  真空 (@ Menhera.org) All rights reserved.
+
+    This work is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This work is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>noiz</title>
+<style>
+    body {
+        margin: 0;
+    }
+
+    article {
+        margin: 1em;
+    }
+</style>
+<article>
+<h1><i>noiz</i> (2020): <i>Version 4</i></h1>
+<p>Work by <span lang="ja">真空</span></p>
+<p><strong>This page plays sounds.</strong></p>
+<p><label><input type="checkbox" checked id="control_update" autocomplete="off"> Update</label></p>
+<p><label>Mean update interval: <input type="number" min="1" step="1" value="5" autocomplete="off" id="control_delay"> s</label></p>
+</article>
+<noiz-visualizer id="visualizer"></noiz-visualizer>
+<script>
+    const control_update = document.getElementById('control_update');
+    const control_delay = document.getElementById('control_delay');
+    const visualizer = document.getElementById('visualizer');
+
+    const DIVISION = 12;
+    const BASE = 32.70319566257483;
+    const E = 535.49165552476473650;
+    const RANGE = 7;
+
+    
+    {
+        const shadows = new WeakMap;
+        customElements.define('noiz-visualizer',
+            class NoizVisualizerElement extends HTMLElement {
+                constructor()
+                {
+                    super();
+                    const shadow = Object.create(null);
+                    shadows.set(this, shadow);
+                    shadow.root = this.attachShadow({mode: 'closed'});
+
+                    shadow.container = document.createElement('div');
+                    shadow.root.append(shadow.container);
+                    shadow.container.style.position = 'relative';
+                    
+                    this.aspectRatio = .5625;
+
+                    shadow.grid = document.createElement('div');
+                    shadow.container.append(shadow.grid);
+                    shadow.grid.style.display = 'grid';
+                    shadow.grid.style.position = 'absolute';
+                    shadow.grid.style.top = '0';
+                    shadow.grid.style.left = '0';
+                    shadow.grid.style.width = '100%';
+                    shadow.grid.style.height = '100%';
+                    shadow.grid.style.gridAutoRows = '1fr';
+
+                    shadow.recalc = () => void 0;
+                    shadow.size = new Uint32Array(2);
+                    this.resize(0, 0);
+                }
+
+                get aspectRatio()
+                {
+                    const shadow = shadows.get(this);
+                    return shadow.aspectRatio;
+                }
+
+                set aspectRatio(aspectRatio)
+                {
+                    const shadow = shadows.get(this);
+                    shadow.aspectRatio = isFinite(aspectRatio) && 0 < aspectRatio
+                        ? Number(aspectRatio) : 1;
+                    shadow.container.style.paddingBlockEnd = `${shadow.aspectRatio * 100}%`;
+                }
+
+                get size()
+                {
+                    const shadow = shadows.get(this);
+                    return new Uint32Array(shadow.size);
+                }
+
+                resize(nCols, nRows)
+                {
+                    const shadow = shadows.get(this);
+                    shadow.size[0] = nCols;
+                    shadow.size[1] = nRows;
+                    [... shadow.grid.childNodes].forEach(node => node.remove());
+                    for (let i = 0; i < shadow.size[0] * shadow.size[1]; i++) {
+                        const item = document.createElement('div');
+                        shadow.grid.append(item);
+                        item.style.backgroundColor = '#000';
+                        item.style.opacity = '0';
+                    }
+
+                    shadow.grid.style.gridTemplateColumns = `repeat(${shadow.size[0]}, 1fr)`;
+                }
+
+                set(aCol, aRow, aValue)
+                {
+                    const [col, row] = new Uint32Array([aCol, aRow]);
+                    const value = isFinite(aValue)
+                        ? Math.min(1, Math.max(0, aValue)) : 1;
+                    const shadow = shadows.get(this);
+                    const logValue = Math.max(0, 1 + Math.log(value) / 11.090354888959124951);
+                    shadow.grid.children[col + row * shadow.size[0]].style.opacity = '' + logValue;
+                }
+            }
+        );
+    }
+
+    const ac = new (window.AudioContext || window.webkitAudioContext);
+
+    const interval01 = (leftIsClosed, rightIsClosed) => {
+        let x;
+        do {
+            x = Math.random();
+        } while (x == 0 && !leftIsClosed || x == 1 && !rightIsClosed);
+        return x;
+    };
+
+    const logRandom = e => {
+        if (!e || isNaN(e) || e <= 0) {
+            return (Math.E ** Math.random() - 1) / (Math.E - 1);
+        } else if (e == 1) {
+            return Math.random();
+        } else if (e > 1) {
+            return (e ** Math.random() - 1) / (e - 1);
+        } else {
+            const e1 = 1 / e;
+            return 1 - (e1 ** Math.random() - 1) / (e1 - 1);
+        }
+    };
+
+    const shuf = (() => {
+        const RAW_RANGE = 1 + 2 ** (RANGE - 1);
+        const re = new Float32Array(RANGE);
+        const im = new Float32Array(RANGE);
+        
+        return levels => {
+            for (let i = 0; i < RANGE; i++) {
+                const phase = 2 * Math.PI * interval01(true, false);
+                const abs = logRandom(E);
+                const j = 2 ** i;
+                re[j] = abs * Math.cos(phase);
+                im[j] = abs * Math.sin(phase);
+                levels[i] = abs;
+            }
+
+            return ac.createPeriodicWave(re, im);
+        };
+    })();
+
+    const tones = [];
+    const gains = [];
+    const levels = [];
+    for (let i = 0; i < DIVISION; i++) {
+        tones[i] = ac.createOscillator();
+        gains[i] = ac.createGain();
+        gains[i].gain.value = 0.1;
+        const f = BASE * 2 ** (i / DIVISION);
+        tones[i].frequency.value = f;
+        tones[i].connect(gains[i]);
+        gains[i].connect(ac.destination);
+        levels[i] = new Float32Array(RANGE);
+    }
+
+    const update = () => {
+        tones.forEach(
+            (osc, i) => osc.setPeriodicWave(shuf(levels[i]))
+        );
+
+        gains.forEach(
+            (gain, i) => {
+                const value = 0.2 * logRandom(E);
+                levels[i].forEach((abs, j) => void visualizer.set(i, j, abs * value));
+                gain.gain.value = value;
+            }
+        );
+    };
+
+    (async () => {
+        visualizer.resize(DIVISION, RANGE);
+        update();
+        tones.forEach(osc => osc.start());
+
+        while (true) {
+            const mean = Math.trunc(control_delay.value) * 1000;
+            const delay = Math.trunc(- Math.log(interval01(false, true)) * mean);
+            // -ln( [Uniform in (0,1)] ) * [avg]
+            await new Promise(res => setTimeout(res, delay));
+            if (control_update.checked) {
+                update();
+            }
+        }
+    })();
+</script>
+</html>
