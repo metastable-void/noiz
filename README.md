@@ -4,7 +4,7 @@
 
 Work by 真空．
 
-Copyright (C) 真空 (@ Menhera.org) All rights reserved.
+Copyright (C) 2020  真空 (@ Menhera.org) All rights reserved.
 
 This work is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
