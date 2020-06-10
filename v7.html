@@ -43,6 +43,7 @@
 <p><label>Mean update interval: <input type="range" min="1" max="60" value="5" autocomplete="off" id="control_delay"></label></p>
 <p><label>Threshold: <input type="range" min="50" max="100" value="85" autocomplete="off" id="control_threshold"></label></p>
 <p><label>Exponent: <input type="range" min="32768" max="131072" value="80000" autocomplete="off" id="control_exp"></label></p>
+<p><label>Density: <input type="range" min="16" max="64" value="32" autocomplete="off" id="control_rate"></label></p>
 </article>
 <noiz-visualizer id="visualizer"></noiz-visualizer>
 <script>
@@ -50,6 +51,7 @@
     const control_delay = document.getElementById('control_delay');
     const control_threshold = document.getElementById('control_threshold');
     const control_exp = document.getElementById('control_exp');
+    const control_rate = document.getElementById('control_rate');
     const visualizer = document.getElementById('visualizer');
 
     const DIVISION = 12;
@@ -216,7 +218,7 @@
 
         gains.forEach(
             (gain, i) => {
-                const value = 0.2 * logisticRandom(R);
+                const value = 0.2 * logisticRandom(control_rate.value);
                 levels[i].forEach((abs, j) => void visualizer.set(i, j, abs * value));
                 gain.gain.value = value;
             }
