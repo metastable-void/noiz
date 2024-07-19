@@ -66,5 +66,7 @@
 
     setWaves();
     tones.forEach(osc => osc.start());
+
+    document.body.onclick = () => ac.resume();
 </script>
 </html>
